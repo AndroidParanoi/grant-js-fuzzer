@@ -50,21 +50,25 @@ class JSFuzzer:
                 answer += statement[:op_loc-1]
                 answer += self.return_various_ops()[statement[op_loc:op_end]]
                 answer += statement[op_end+1:]
-            if statement[len(statement) - 1] == ";":
-                var = statement.split(",")
-                var_name = var[0]
-                var_value = var[1]
-                answer += self.create_variable(var_name, var_value)
-            elif "=" in statement:
+            if "var" in statement and "function" not in statement:
+                var = statement.split(" ")
+                var_name = var[1]
+                var_value = var[3]
+                answer += "var "
+                answer += self.insert_value_in_variable(var_name, var_value)
+            if (("var" not in statement) and ("function" not in statement) and ("=" in statement)):
                 if "MODIFY_ITSELF_ARRAY" in statement:
                     answer += self.change_itself_array(statement)
                 else:
                     if "FCALL" not in statement:
-                        answer += self.insert_value_in_variable(statement)
+                        var = statement.split(" ")
+                        var_name = var[0]
+                        var_value = var[2]
+                        answer += self.insert_value_in_variable(var_name, var_value)
             if "function" in statement:
-                function = statement.split(",")
+                function = statement.split(" ")
                 function_name = function[1]
-                argument = function[0] 
+                argument = function[3] 
                 answer += self.create_function(function_name, argument)
             if "close_bracket" in statement:
                 answer += "}"
@@ -78,7 +82,7 @@ class JSFuzzer:
             if "strict-mode" in statement:
                 answer += '"use-strict";'
             if "catch" in statement:
-                answer += "}catch(e){console.log(e);"
+                answer += "}catch(e){console.log(e);}"
             if "call" in statement:
                 answer += f"{statement.split(',')[1]};"
             if "return" in statement:
@@ -104,12 +108,8 @@ class JSFuzzer:
     def create_function(self, function_name, argument):
         return f"var {function_name} = {argument}" + "{"
 
-    def insert_value_in_variable(self, var):
-        split_var = var.split("=", 1)
-        return f"{split_var[0]} = {split_var[1]}; "     
-
-    def create_variable(self, var_name, var_value):
-        return f"var {var_name} = {var_value}" 
+    def insert_value_in_variable(self, var_name, value):
+        return f"{var_name} = {value}"     
 
     def return_keywords(self):
         return ["RANDOM_NUMBER", "LENGTH"]
