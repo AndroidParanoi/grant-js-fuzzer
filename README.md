@@ -15,7 +15,7 @@ Give the file and cycle flags with --file and --cycles respectively. The file **
 
 ***var variable_name = value;*** - Initialiazes a variable with name "variable_name" and value "value": "var variable_name = value;"
 
-***variable_name = value*** - Reassigns the variable with name "variable_name" to value "value": "variable_name = value;"
+***variable_name = value;*** - Reassigns the variable with name "variable_name" to value "value": "variable_name = value;"
 
 ***FCALL*** - variable4,FCALL,Callee.abs(variable4),acos(variable4)...etc - Tells jsfuzzer the next statements will be function calls with argument variable4, assigned to variable4 from the Callee.
 
