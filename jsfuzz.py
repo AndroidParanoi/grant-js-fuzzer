@@ -1,5 +1,5 @@
-from random import choice, randint
-import string
+#!/bin/python
+from random import randint
 import argparse
 from jsbeautifier import beautify
 from random import choice
@@ -8,7 +8,6 @@ class JSFuzzer:
 
     def parse_file(self, file, cycles):
         bt_answer = ""
-        skip = False
         with open(file, "r") as f:
             statements = f.readlines()
             for cycle in range(cycles):
@@ -42,7 +41,7 @@ class JSFuzzer:
         if "var" in statement and "function" not in statement:
             var = statement.split(" ")
             var_name = var[1]
-            var_value = var[3]
+            var_value = " ".join(var[3:])
             answer += "var "
             answer += self.insert_value_in_variable(var_name, var_value)
         if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement):
@@ -75,18 +74,13 @@ class JSFuzzer:
         if "catch" in statement:
             answer += "}catch(e){console.log(e);}"
         if "call" in statement:
-            answer += f"{statement.split(',')[1]};"            
+            answer += f"{statement.split(',' , 1)[1]};"            
         if "if" in statement or "else if" in statement or "else" in statement:
             answer += statement
         if "return" in statement and "}" not in statement:
             answer += "return"
         return answer
 
-    def return_random_choices(self):
-        return [["Object", "Function", "Array", "RegExp", "Datetime"], ["!==", "!==", "==", "===", "<", ">", "<=", ">=", "&&", "||"], ["undefined", "''", "true", "false", "1", "{}", "null", "[]"]]
-                
-    def return_available_objects(self):
-        return ["new Object", "new Function", "new String", "new Array", "new AggregateError", "new AsyncFunction", "new Atomics", "new BigInt64Array", "new BigUint64Array", "new Boolean", "new Dataview", "new Date", "new decodeURI"]
 
     def call_function(self, function_name):
         return f"{function_name}()"
@@ -103,15 +97,6 @@ class JSFuzzer:
     #def js_run(self, func):
         #system("/home/androidparanoid/DynamoRIO-Linux-9.0.1/bin64/drrun -t drcov ")
 
-    def get_all_types_functions(self):
-        return """const getMethods = (obj) => {
-                  let properties = new Set()
-                  let currentObj = obj
-                  do {
-                    Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
-                  } while ((currentObj = Object.getPrototypeOf(currentObj)))
-                  return [...properties.keys()].filter(item => typeof obj[item] === 'function')
-                }"""
 #    def compile_all_report(self):
 #        system("llvm-profdata merge -output=code.profdata *.profraw")
 #        system("llvm-cov show /home/androidparanoid/spidermonkey/obj-debug-x86_64-pc-linux-gnu/dist/bin/js -instr-profile=code.profdata /home/androidparanoid/spidermonkey/js/src/**/*.cpp -use-color --format html > /tmp/coverage.html")
