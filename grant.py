@@ -2,6 +2,7 @@
 
 from random import randint
 import argparse
+import re
 from jsbeautifier import beautify
 
 class JSFuzzer:
@@ -28,7 +29,7 @@ class JSFuzzer:
         return  "var " + self.insert_value_in_variable(var[1], " ".join(var[3:])) 
 
     def parse_for_change_value_var(self, statement):
-        var = statement.split(" ")
+        var = statement.split(" ", 2)
         var_value = " ".join(var[2:])
         if "MODIFY_ITSELF_ARRAY" in statement:
             var_value = f"new Array({randint(10000,20000)});"
@@ -40,7 +41,7 @@ class JSFuzzer:
     
     def parse_for_fcall(self, statement):
         answer = ""
-        split_statement = statement.split("=")  
+        split_statement = statement.split("=", 1)  
         var_name = split_statement[0]
         call_args = split_statement[1].split(",")
         libr_call = call_args[1]    
@@ -59,8 +60,9 @@ class JSFuzzer:
             return answer
         if "var" in statement and "function" not in statement and "FCALL" not in statement:
             answer += self.parse_for_var(statement)
-        if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement) and "FCALL" not in statement:
+        if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement) and "FCALL" not in statement and "return" not in statement:
             answer += self.parse_for_change_value_var(statement)
+            return answer
         elif "function" in statement and "var" in statement:
             answer += self.parse_for_function(statement)
         if "close_bracket" in statement:
@@ -71,16 +73,21 @@ class JSFuzzer:
                 bak = "var "
                 statement = statement.replace("var", "")
             answer += bak + self.parse_for_fcall(statement)
+            return answer
         if "strict-mode" in statement:
             answer += '"use-strict";'
-        if "catch" in statement:
-            answer += "}catch(e){console.log(e);}"
+        if "catch(" in statement:
+            answer += statement
+            return answer
         if "call" in statement:
             answer += f"{statement.split(',' , 1)[1]};"            
         if "if" in statement or "else if" in statement or "else" in statement:
             answer += statement
-        if "return" in statement and "}" not in statement:
-            answer += "return"
+        if "return" in statement:
+            answer += statement
+            return answer
+        if re.compile(".+\(.+\)").match(statement) and "var" not in statement:
+            answer += statement
         return answer
 
 
