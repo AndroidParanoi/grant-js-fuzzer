@@ -13,15 +13,10 @@ class JSFuzzer:
             statements = f.readlines()
             for cycle in range(cycles):
                 for statement in statements:
-                    if statement == "BEGIN_ONLY" and cycle != 0:
-                        skip = True
+                    if "ONLY" in statement and cycle != 0:
                         continue
-                    if statement == "END_ONLY" and cycle != 0:
-                        skip = False
-                    if skip:
-                        continue
-                    else:
-                        bt_answer += self.do_parse(statement)
+                    statement = statement.strip("ONLY,")
+                    bt_answer += self.do_parse(statement)
                 print(beautify(bt_answer))  
                 bt_answer = ""
                 #self.js_run(bt_answer)
