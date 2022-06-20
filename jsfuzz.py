@@ -44,19 +44,13 @@ class JSFuzzer:
                 loop_var = loop[1]
                 loop_count = loop[2]
                 answer += self.do_for_loop(loop_var, loop_count)
-            if "operator_" in statement:
-                op_loc = statement.find("operator_")
-                op_end = statement.rfind(" ")
-                answer += statement[:op_loc-1]
-                answer += self.return_various_ops()[statement[op_loc:op_end]]
-                answer += statement[op_end+1:]
             if "var" in statement and "function" not in statement:
                 var = statement.split(" ")
                 var_name = var[1]
                 var_value = var[3]
                 answer += "var "
                 answer += self.insert_value_in_variable(var_name, var_value)
-            if (("var" not in statement) and ("function" not in statement) and ("=" in statement)):
+            if (("var" not in statement) and ("function" not in statement) and ("=" in statement) and "===" not in statement):
                 if "MODIFY_ITSELF_ARRAY" in statement:
                     answer += self.change_itself_array(statement)
                 else:
@@ -84,14 +78,10 @@ class JSFuzzer:
             if "catch" in statement:
                 answer += "}catch(e){console.log(e);}"
             if "call" in statement:
-                answer += f"{statement.split(',')[1]};"
-            if "return" in statement:
+                answer += f"{statement.split(',')[1]};"            
+            if "if" in statement or "else if" in statement or "else" in statement or "return" in statement:
                 answer += statement
             return answer
-    
-    def return_various_ops(self):
-        return {"operator_triple_equal":"===", "op_equal":"==", "operator_less_than_sign":"<", "operator_less_equal_than_sign":"<=",
-                "operator_bigger_than_sign":">", "operator_bigger_equal_than_sign":">=", "operator_and":"&&", "operator_or":"||"}
 
     def return_random_choices(self):
         return [["Object", "Function", "Array", "RegExp", "Datetime"], ["!==", "!==", "==", "===", "<", ">", "<=", ">=", "&&", "||"], ["undefined", "''", "true", "false", "1", "{}", "null", "[]"]]
