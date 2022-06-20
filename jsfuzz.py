@@ -33,10 +33,7 @@ class JSFuzzer:
     def parse_for_change_value_var(self, statement):
         var = statement.split(" ")
         var_name = var[0]
-        if "}" in statement:
-            var_value = " ".join(var[2:])
-        else:
-            var_value = var[2]
+        var_value = " ".join(var[2:])
         if "MODIFY_ITSELF_ARRAY" in statement:
             var_value = f"new Array({randint(10000,20000)});"
         return self.insert_value_in_variable(var_name, var_value)
