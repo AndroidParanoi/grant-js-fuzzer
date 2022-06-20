@@ -70,36 +70,37 @@ ONLY,close_bracket
 ```
 var swag2 = function(argument) {
     try {
-        for (let i = 0; i <= argument.length; i++) {
-            argument[i] = i
+        for (let i = 0; i <= 1000; i++) {
+            argument[i] = argument + i;
+            argument[i] = i = (i + 0.3);
+            var lol = Array.isArray(argument[i]);
         }
     } catch (e) {
         console.log(e);
     }
 }
-for (let i = 0; i <= 100; i++) {
+for (let i = 0; i <= 2; i++) {
     if (i === i) {
-        i = 1.1
+        i = 1.1;
         swag2(i);
     }
 }
 var swag3 = function(argument1, argument2) {
     try {
         for (let i = 0; i <= argument1.length + argument2; i++) {
-            argument1[length] = true && argument2[length]
+            argument1[length] = true && argument2[length];
         }
     } catch (e) {
         console.log(e);
     }
 }
-for (let i = 0; i <= 100; i++) {
+for (let i = 0; i <= 2; i++) {
     if (i === i) {
-        var t = i
-        t = Math.sin(i);
-        i = t
+        var t = i;
+        t = Math.sin(t);
+        t = t * 1;
         swag3(i, t);
     }
 }
-
 
 ```
