@@ -1,11 +1,9 @@
-# jsfuzzer
+# grant
 A simple grammar based js fuzzer I'm building
 # Usage
 Give the file and cycle flags with --file and --cycles respectively. The file ***must*** be written according to the rules:
 # Rules
-***BEGIN_ONLY*** - Initiates a section of javascript code that is to be printed only once.
-
-***END_ONLY*** - Closes that section.
+***ONLY,*** - Insert before a statement to print it once
 
 ***var name = function()*** - Is converted onto a function declaration in javascript: "var name = function() {"
 
