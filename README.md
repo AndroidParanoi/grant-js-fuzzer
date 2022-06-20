@@ -31,9 +31,72 @@ Give the file and cycle flags with --file and --cycles respectively. The file **
 ***EXAMPLE:***
 
 ```
-BEGIN_ONLY
-var hello_world = function()
-return "Hello World"
-close_bracket
-END_ONLY
+ONLY,var swag2 = function(argument)
+ONLY,try
+ONLY,loop,i,argument.length
+ONLY,
+ONLY,argument[i] = i
+ONLY,close_bracket
+ONLY,catch()
+ONLY,close_bracket
+ONLY,loop,i,100
+ONLY,if(i === i){
+ONLY,i = 1.1
+ONLY,call,swag2(i)
+ONLY,close_bracket
+ONLY,close_bracket
+ONLY,var swag3 = function(argument1,argument2)
+ONLY,try
+ONLY,loop,i,argument1.length + argument2
+ONLY,argument1[length] = true && argument2[length]
+ONLY,close_bracket
+ONLY,catch()
+ONLY,close_bracket
+ONLY,loop,i,100
+ONLY,if(i === i){
+ONLY,var t = i
+ONLY,t = FCALL,Math,sin(i)
+ONLY,i = t
+ONLY,call,swag3(i, t)
+ONLY,close_bracket
+ONLY,close_bracket
+```
+
+***GENERATED CODE:***
+
+```
+var swag2 = function(argument) {
+    try {
+        for (let i = 0; i <= argument.length; i++) {
+            argument[i] = i
+        }
+    } catch (e) {
+        console.log(e);
+    }
+}
+for (let i = 0; i <= 100; i++) {
+    if (i === i) {
+        i = 1.1
+        swag2(i);
+    }
+}
+var swag3 = function(argument1, argument2) {
+    try {
+        for (let i = 0; i <= argument1.length + argument2; i++) {
+            argument1[length] = true && argument2[length]
+        }
+    } catch (e) {
+        console.log(e);
+    }
+}
+for (let i = 0; i <= 100; i++) {
+    if (i === i) {
+        var t = i
+        t = Math.sin(i);
+        i = t
+        swag3(i, t);
+    }
+}
+
+
 ```
