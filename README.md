@@ -19,9 +19,9 @@ Give the file and cycle flags with --file and --cycles respectively. The file **
 
 ***MODIFY_ITSELF_ARRAY*** - variable4 = MODIFY_ITSELF_ARRAY - Initialies a variable to a new Array of random length.
 
-***close_bracket*** - Closes the previously opened bracket. (***Brackets must be closed in order to have valid js. If you use 'function(),name', then you must write close_bracket when the function body is finished. This applies to every instruction which opens brackets except for catch***
+***close_bracket*** - Closes the previously opened bracket. (***Brackets must be closed in order to have valid js. If you use 'var name = function()', then you must write close_bracket when the function body is finished. This applies to every instruction which opens brackets except for catch***
 
-***loop,g,length*** - Initialiazes a for loop - "for(let g = 0; g < length; g++) {"
+***for_loop,i=0,i<=1000*** - Initialiazes a for loop - "for(let g = 0; g < length; g++) {"
 
 ***call,function_name(arguments)*** - Calls the function named 'function_name' with arguments 'arguments'. - "function_name(arguments);"
 
@@ -35,13 +35,14 @@ Give the file and cycle flags with --file and --cycles respectively. The file **
 ```
 ONLY,var swag2 = function(argument)
 ONLY,try
-ONLY,loop,i,argument.length
-ONLY,
-ONLY,argument[i] = i
+ONLY,for_loop,i=0,i<=1000
+ONLY,argument[i] = argument + i
+ONLY,argument[i] = i = (i+0.3)
+ONLY,var lol = FCALL,Array,isArray(argument[i])
 ONLY,close_bracket
 ONLY,catch()
 ONLY,close_bracket
-ONLY,loop,i,100
+ONLY,loop,i,2
 ONLY,if(i === i){
 ONLY,i = 1.1
 ONLY,call,swag2(i)
@@ -49,16 +50,16 @@ ONLY,close_bracket
 ONLY,close_bracket
 ONLY,var swag3 = function(argument1,argument2)
 ONLY,try
-ONLY,loop,i,argument1.length + argument2
+ONLY,for_loop,i,i<=argument1.length + argument2
 ONLY,argument1[length] = true && argument2[length]
 ONLY,close_bracket
 ONLY,catch()
 ONLY,close_bracket
-ONLY,loop,i,100
+ONLY,loop,i,2
 ONLY,if(i === i){
 ONLY,var t = i
-ONLY,t = FCALL,Math,sin(i)
-ONLY,i = t
+ONLY,t = FCALL,Math,sin(t)
+ONLY,t = t * 1
 ONLY,call,swag3(i, t)
 ONLY,close_bracket
 ONLY,close_bracket
