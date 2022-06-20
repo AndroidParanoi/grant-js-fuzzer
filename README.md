@@ -27,6 +27,8 @@ Give the file and cycle flags with --file and --cycles respectively. The file **
 
 ***return value*** - Returns from the current function body with value.
 
+***IF(condition){*** - Prints the if statement - "if(''===''){do_stuff}"
+
  
 ***EXAMPLE:***
 
