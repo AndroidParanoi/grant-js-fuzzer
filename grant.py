@@ -24,17 +24,6 @@ class JSFuzzer:
         loop = statement.split(",")
         return self.do_for_loop(loop[1], loop[2])
 
-    def parse_for_var(self, statement):
-        var = statement.split(" ")
-        return  "var " + self.insert_value_in_variable(var[1], " ".join(var[3:])) 
-
-    def parse_for_change_value_var(self, statement):
-        var = statement.split(" ", 2)
-        var_value = " ".join(var[2:])
-        if "MODIFY_ITSELF_ARRAY" in statement:
-            var_value = f"new Array({randint(10000,20000)});"
-        return self.insert_value_in_variable(var[0], var_value) 
-
     def parse_for_function(self, statement):
         function = statement.split(" ")
         return self.create_function(function[1], function[3])
@@ -46,7 +35,7 @@ class JSFuzzer:
         call_args = split_statement[1].split(",")
         libr_call = call_args[1]    
         for function in call_args[2:]:  
-            answer += f"{var_name} = {libr_call}.{function};"
+            answer += f"{var_name} = {libr_call}.{function.replace(';', ',')};"
         return answer   
 
     def do_parse(self, statement):
@@ -59,9 +48,9 @@ class JSFuzzer:
             answer += self.parse_for_loop(statement)
             return answer
         if "var" in statement and "function" not in statement and "FCALL" not in statement:
-            answer += self.parse_for_var(statement)
+            answer += statement + ";"
         if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement) and "FCALL" not in statement and "return" not in statement:
-            answer += self.parse_for_change_value_var(statement)
+            answer += statement + ";"
             return answer
         elif "function" in statement and "var" in statement:
             answer += self.parse_for_function(statement)
@@ -83,6 +72,7 @@ class JSFuzzer:
             answer += f"{statement.split(',' , 1)[1]};"            
         if "if" in statement or "else if" in statement or "else" in statement:
             answer += statement
+            return answer
         if "return" in statement:
             answer += statement
             return answer
@@ -96,9 +86,6 @@ class JSFuzzer:
 
     def create_function(self, function_name, argument):
         return f"var {function_name} = {argument}" + "{"
-
-    def insert_value_in_variable(self, var_name, value):
-        return f"{var_name} = {value};"     
 
     def do_for_loop(self, var_name, loop_count):
         return f"for(let {var_name}; {loop_count}; {var_name.split('=')[0]}++)" + "{"
