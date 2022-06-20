@@ -28,7 +28,7 @@ class JSFuzzer:
         var = statement.split(" ")
         var_name = var[1]
         var_value = " ".join(var[3:])
-        return "var " + self.insert_value_in_variable(var_name, var_value)
+        return  "var " + self.insert_value_in_variable(var_name, var_value) 
 
     def parse_for_change_value_var(self, statement):
         var = statement.split(" ")
@@ -36,7 +36,7 @@ class JSFuzzer:
         var_value = " ".join(var[2:])
         if "MODIFY_ITSELF_ARRAY" in statement:
             var_value = f"new Array({randint(10000,20000)});"
-        return self.insert_value_in_variable(var_name, var_value)
+        return self.insert_value_in_variable(var_name, var_value) 
 
     def parse_for_function(self, statement):
         function = statement.split(" ")
@@ -47,8 +47,8 @@ class JSFuzzer:
     def parse_for_fcall(self, statement):
         answer = ""
         split_statement = statement.split("=")  
-        var_name = split_statement[0]   
-        call_args = split_statement[1].split(",")   
+        var_name = split_statement[0]
+        call_args = split_statement[1].split(",")
         libr_call = call_args[1]    
         for function in call_args[2:]:  
             answer += f"{var_name} = {libr_call}.{function};"
@@ -62,17 +62,20 @@ class JSFuzzer:
             answer += "try{"
         if "loop" in statement:
             answer += self.parse_for_loop(statement)
-        if "var" in statement and "function" not in statement:
+        if "var" in statement and "function" not in statement and "FCALL" not in statement:
             answer += self.parse_for_var(statement)
-        if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement):
-            if "FCALL" not in statement:
-                answer += self.parse_for_change_value_var(statement)
+        if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement) and "FCALL" not in statement:
+            answer += self.parse_for_change_value_var(statement)
         elif "function" in statement and "var" in statement:
             answer += self.parse_for_function(statement)
         if "close_bracket" in statement:
             answer += "}"
         if "FCALL" in statement:
-            answer += self.parse_for_fcall(statement)
+            bak = ""
+            if "var " in statement:
+                bak = "var "
+                statement = statement.replace("var", "")
+            answer += bak + self.parse_for_fcall(statement)
         if "strict-mode" in statement:
             answer += '"use-strict";'
         if "catch" in statement:
@@ -93,7 +96,7 @@ class JSFuzzer:
         return f"var {function_name} = {argument}" + "{"
 
     def insert_value_in_variable(self, var_name, value):
-        return f"{var_name} = {value}"     
+        return f"{var_name} = {value};"     
 
     def do_for_loop(self, var_name, iteration_count):
         return "for(let " + var_name + " = 0;" + var_name + "<=" + iteration_count + ";" + var_name + "++){"
