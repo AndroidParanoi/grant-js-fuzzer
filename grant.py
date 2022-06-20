@@ -1,4 +1,5 @@
 #!/bin/python
+
 from random import randint
 import argparse
 from jsbeautifier import beautify
@@ -20,29 +21,22 @@ class JSFuzzer:
     
     def parse_for_loop(self, statement):
         loop = statement.split(",")
-        loop_var = loop[1]
-        loop_count = loop[2]
-        return self.do_for_loop(loop_var, loop_count)
+        return self.do_for_loop(loop[1], loop[2])
 
     def parse_for_var(self, statement):
         var = statement.split(" ")
-        var_name = var[1]
-        var_value = " ".join(var[3:])
-        return  "var " + self.insert_value_in_variable(var_name, var_value) 
+        return  "var " + self.insert_value_in_variable(var[1], " ".join(var[3:])) 
 
     def parse_for_change_value_var(self, statement):
         var = statement.split(" ")
-        var_name = var[0]
         var_value = " ".join(var[2:])
         if "MODIFY_ITSELF_ARRAY" in statement:
             var_value = f"new Array({randint(10000,20000)});"
-        return self.insert_value_in_variable(var_name, var_value) 
+        return self.insert_value_in_variable(var[0], var_value) 
 
     def parse_for_function(self, statement):
         function = statement.split(" ")
-        function_name = function[1]
-        argument = function[3] 
-        return self.create_function(function_name, argument)
+        return self.create_function(function[1], function[3])
     
     def parse_for_fcall(self, statement):
         answer = ""
@@ -60,8 +54,9 @@ class JSFuzzer:
             return ""
         if "try" in statement:
             answer += "try{"
-        if "loop" in statement:
+        if "for_loop" in statement:
             answer += self.parse_for_loop(statement)
+            return answer
         if "var" in statement and "function" not in statement and "FCALL" not in statement:
             answer += self.parse_for_var(statement)
         if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement) and "FCALL" not in statement:
@@ -98,8 +93,8 @@ class JSFuzzer:
     def insert_value_in_variable(self, var_name, value):
         return f"{var_name} = {value};"     
 
-    def do_for_loop(self, var_name, iteration_count):
-        return "for(let " + var_name + " = 0;" + var_name + "<=" + iteration_count + ";" + var_name + "++){"
+    def do_for_loop(self, var_name, loop_count):
+        return f"for(let {var_name}; {loop_count}; {var_name.split('=')[0]}++)" + "{"
     
 def main():
 
