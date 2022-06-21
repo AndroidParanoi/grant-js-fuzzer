@@ -11,9 +11,9 @@ class JSFuzzer:
         bt_answer = ""
         with open(file, "r") as f:
             statements = f.readlines()
-            for cycle in range(cycles):
+            for cycle in range(cycles + 1):
                 for statement in statements:
-                    if "ONLY" in statement and cycle != 0:
+                    if "ONLY," in statement and cycle != 0:
                         continue
                     statement = statement.strip("ONLY,")
                     bt_answer += self.do_parse(statement)
@@ -24,9 +24,6 @@ class JSFuzzer:
         loop = statement.split(",")
         return self.do_for_loop(loop[1], loop[2])
 
-    def parse_for_function(self, statement):
-        function = statement.split(" ")
-        return self.create_function(function[1], function[3])
     
     def parse_for_fcall(self, statement):
         answer = ""
@@ -42,50 +39,15 @@ class JSFuzzer:
         answer = ""
         if not isinstance(statement, str):
             return ""
-        if "try" in statement:
-            answer += "try{"
-        if "for_loop" in statement:
-            answer += self.parse_for_loop(statement)
-            return answer
-        if "var" in statement and "function" not in statement and "FCALL" not in statement:
-            answer += statement + ";"
-        if ("var" not in statement) and ("=" in statement) and ("if" not in statement and "else if" not in statement and "else" not in statement) and "FCALL" not in statement and "return" not in statement:
-            answer += statement + ";"
-            return answer
-        elif "function" in statement and "var" in statement:
-            answer += self.parse_for_function(statement)
-        if "close_bracket" in statement:
-            answer += "}"
+        if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call" not in statement:
+            return statement
         if "FCALL" in statement:
-            bak = ""
-            if "var " in statement:
-                bak = "var "
-                statement = statement.replace("var", "")
-            answer += bak + self.parse_for_fcall(statement)
-            return answer
-        if "strict-mode" in statement:
-            answer += '"use-strict";'
-        if "catch(" in statement:
-            answer += statement
-            return answer
+            return self.parse_for_fcall(statement)
+        elif "for_loop" in statement:
+            return self.parse_for_loop(statement)
         if "call" in statement:
-            answer += f"{statement.split(',' , 1)[1]};"            
-        if "if" in statement or "else if" in statement or "else" in statement:
-            answer += statement
-            return answer
-        if "return" in statement:
-            answer += statement
-            return answer
-        if re.compile(".+\(.+\)").match(statement) and "var" not in statement:
-            answer += statement
-        return answer
-
-
-    def call_function(self, function_name):
-        return f"{function_name}()"
-
-    def create_function(self, function_name, argument):
-        return f"var {function_name} = {argument}" + "{"
+            return statement.split(",")[1] + ";"
+        return statement
 
     def do_for_loop(self, var_name, loop_count):
         return f"for(let {var_name}; {loop_count}; {var_name.split('=')[0]}++)" + "{"
