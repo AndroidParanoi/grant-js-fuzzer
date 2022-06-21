@@ -36,7 +36,6 @@ class JSFuzzer:
         return answer   
 
     def do_parse(self, statement):
-        answer = ""
         if not isinstance(statement, str):
             return ""
         if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call" not in statement:
@@ -45,7 +44,7 @@ class JSFuzzer:
             return self.parse_for_fcall(statement)
         elif "for_loop" in statement:
             return self.parse_for_loop(statement)
-        if "call" in statement:
+        elif "call" in statement:
             return statement.split(",")[1] + ";"
         return statement
 
