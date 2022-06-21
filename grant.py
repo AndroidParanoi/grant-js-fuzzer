@@ -22,7 +22,7 @@ class JSFuzzer:
     
     def parse_for_loop(self, statement):
         loop = statement.split(",")
-        return self.do_for_loop(loop[1], loop[2])
+        return self.do_for_loop(loop[1], loop[2], loop[3])
 
     
     def parse_for_fcall(self, statement):
@@ -60,8 +60,8 @@ class JSFuzzer:
             return statement.split(",")[1] + ";"
         return statement
 
-    def do_for_loop(self, var_name, loop_count):
-        return f"for(let {var_name}; {loop_count}; {var_name.split('=')[0]}++)" + "{"
+    def do_for_loop(self, var_name, loop_count, loop_incr_decre):
+        return f"for(let {var_name}; {loop_count}; {loop_incr_decre})" + "{"
 
     def return_random_primitive_value(self):
         return choice(["null", "undefined", "true", "false", "1", "''", "{}"])
