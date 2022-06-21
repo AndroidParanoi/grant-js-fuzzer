@@ -40,9 +40,9 @@ class JSFuzzer:
             return ""
         if "CREATE_ARRAY" in statement:
             statement = statement.replace("CREATE_ARRAY", f"new Array({randint(20000,30000)})")
-        elif "CREATE_ARRAY_OF" in statement:
+        if "CREATE_ARRAY_OF" in statement:
             statement = statement.replace("CREATE_ARRAY_OF", f"Array.of({choice(self.return_random_primitive_value())})")
-        elif "MUTATE_ARRAY" in statement:
+        if "MUTATE_ARRAY" in statement:
             statement = statement.replace("MUTATE_ARRAY", self.return_mutated_arrays())
         if "RANDOM_VAR" in statement:
             statement = statement.replace("RANDOM_VAR", self.return_random_primitive_value())
