@@ -38,10 +38,6 @@ class JSFuzzer:
     def do_parse(self, statement):
         if not isinstance(statement, str):
             return ""
-        if "CREATE_ARRAY" in statement:
-            statement = statement.replace("CREATE_ARRAY", f"new Array({randint(20000,30000)})")
-        if "CREATE_ARRAY_OF" in statement:
-            statement = statement.replace("CREATE_ARRAY_OF", f"Array.of({choice(self.return_random_primitive_value())})")
         if "MUTATE_ARRAY" in statement:
             statement = statement.replace("MUTATE_ARRAY", self.return_mutated_arrays())
         if "RANDOM_VAR" in statement:
