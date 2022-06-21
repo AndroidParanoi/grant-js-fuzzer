@@ -7,19 +7,17 @@ Give the file and cycle flags with --file and --cycles respectively. The file **
 
 ***var name = function()*** - Is converted onto a function declaration in javascript: "var name = function() {"
 
-***try*** - Initiates a try block: "try {"
+***try {*** - Initiates a try block: "try {"
 
-***catch()*** - Closes the try block with a catch - "catch(e) {}"
+***}catch(e){do_stuff;}*** - Closes the try block with a catch - "catch(e) {do_stuff;}"
 
 ***var variable_name = value;*** - Initialiazes a variable with name "variable_name" and value "value": "var variable_name = value;"
 
 ***variable_name = value;*** - Reassigns the variable with name "variable_name" to value "value": "variable_name = value;"
 
-***FCALL*** - variable4,FCALL,Callee.abs(variable4),acos(variable4)...etc - Tells jsfuzzer the next statements will be function calls with argument variable4, assigned to variable4 from the Callee.
+***FCALL*** - variable4,FCALL,Callee.abs(variable4),acos(variable4)...etc - Tells jsfuzzer the next statements will be function calls with argument variable4, assigned to variable4 from the Caller.
 
-***MODIFY_ITSELF_ARRAY*** - variable4 = MODIFY_ITSELF_ARRAY - Initialies a variable to a new Array of random length.
-
-***close_bracket*** - Closes the previously opened bracket. (***Brackets must be closed in order to have valid js. If you use 'var name = function()', then you must write close_bracket when the function body is finished. This applies to every instruction which opens brackets except for catch***
+***}*** - Closes the previously opened bracket. (***Brackets must be closed in order to have valid js. If you use 'var name = function()', then you must write close_bracket when the function body is finished. This applies to every instruction which opens brackets except for catch***
 
 ***for_loop,i=0,i<=1000*** - Initialiazes a for loop - "for(let g = 0; g < length; g++) {"
 
@@ -33,74 +31,70 @@ Give the file and cycle flags with --file and --cycles respectively. The file **
 ***EXAMPLE:***
 
 ```
-ONLY,var swag2 = function(argument)
-ONLY,try
-ONLY,for_loop,i=0,i<=1000
-ONLY,argument[i] = argument + i
-ONLY,argument[i] = i = (i+0.3)
-ONLY,var lol = FCALL,Array,isArray(argument[i])
-ONLY,close_bracket
-ONLY,catch()
-ONLY,close_bracket
-ONLY,loop,i,2
-ONLY,if(i === i){
-ONLY,i = 1.1
-ONLY,call,swag2(i)
-ONLY,close_bracket
-ONLY,close_bracket
-ONLY,var swag3 = function(argument1,argument2)
-ONLY,try
-ONLY,for_loop,i,i<=argument1.length + argument2
-ONLY,argument1[length] = true && argument2[length]
-ONLY,close_bracket
-ONLY,catch()
-ONLY,close_bracket
-ONLY,loop,i,2
-ONLY,if(i === i){
-ONLY,var t = i
-ONLY,t = FCALL,Math,sin(t)
-ONLY,t = t * 1
-ONLY,call,swag3(i, t)
-ONLY,close_bracket
-ONLY,close_bracket
+ONLY,var swag = function() {
+ONLY,    try {
+ONLY,        var arr = new Array(10000);
+ONLY,        var str = '';
+ONLY,        var n = 1;
+ONLY,        var unde = undefined;
+ONLY,        var nu = null;
+ONLY,        var obj = {};
+ONLY,        var constr = '';
+ONLY,        var d = new Date();
+ONLY,        for_loop,i=0,i<=10000
+ONLY,            arr[i] = FCALL,arr,toString(),join((nu && constr)),pop(),push(str == n),shift(),unshift()
+ONLY,            arr[arr.length] = FCALL,arr,sort().concat(arr)
+ONLY,            arr[arr.length - 1] = FCALL,d,getTime(),getFullYear(),getMonth()
+ONLY,            if(true){
+ONLY,                console.log(1);
+ONLY,                n = FCALL,Math,round(arr[i])
+ONLY,                n = FCALL,Math,abs(n) + n
+ONLY,                arr[n] = 0;
+ONLY,                obj = FCALL,Object,values(obj) + obj,keys(obj) + obj
+ONLY,            }
+ONLY,        }
+ONLY,    }catch(e){console.log(e);}
+ONLY,}
+ONLY,call,swag()
 ```
 
 ***GENERATED CODE:***
 
 ```
-var swag2 = function(argument) {
+var swag = function() {
     try {
-        for (let i = 0; i <= 1000; i++) {
-            argument[i] = argument + i;
-            argument[i] = i = (i + 0.3);
-            var lol = Array.isArray(argument[i]);
+        var arr = new Array(10000);
+        var str = '';
+        var n = 1;
+        var unde = undefined;
+        var nu = null;
+        var obj = {};
+        var constr = '';
+        var d = new Date();
+        for (let i = 0; i <= 10000; i++) {
+            arr[i] = arr.toString();
+            arr[i] = arr.join((nu && constr));
+            arr[i] = arr.pop();
+            arr[i] = arr.push(str == n);
+            arr[i] = arr.shift();
+            arr[i] = arr.unshift();
+            arr[arr.length] = arr.sort().concat(arr);
+            arr[arr.length - 1] = d.getTime();
+            arr[arr.length - 1] = d.getFullYear();
+            arr[arr.length - 1] = d.getMonth();
+            if (true) {
+                console.log(1);
+                n = Math.round(arr[i]);
+                n = Math.abs(n) + n;
+                arr[n] = 0;
+                obj = Object.values(obj) + obj;
+                obj = Object.keys(obj) + obj;
+            }
         }
     } catch (e) {
         console.log(e);
     }
 }
-for (let i = 0; i <= 2; i++) {
-    if (i === i) {
-        i = 1.1;
-        swag2(i);
-    }
-}
-var swag3 = function(argument1, argument2) {
-    try {
-        for (let i = 0; i <= argument1.length + argument2; i++) {
-            argument1[length] = true && argument2[length];
-        }
-    } catch (e) {
-        console.log(e);
-    }
-}
-for (let i = 0; i <= 2; i++) {
-    if (i === i) {
-        var t = i;
-        t = Math.sin(t);
-        t = t * 1;
-        swag3(i, t);
-    }
-}
+swag();
 
 ```
