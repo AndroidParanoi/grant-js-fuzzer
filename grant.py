@@ -2,8 +2,8 @@
 
 from random import randint
 import argparse
-import re
 from jsbeautifier import beautify
+from random import choice
 
 class JSFuzzer:
 
@@ -38,9 +38,21 @@ class JSFuzzer:
     def do_parse(self, statement):
         if not isinstance(statement, str):
             return ""
+        if "CREATE_ARRAY" in statement:
+            statement = statement.replace("CREATE_ARRAY", f"new Array({randint(20000,30000)})")
+        elif "CREATE_ARRAY_OF" in statement:
+            statement = statement.replace("CREATE_ARRAY_OF", f"Array.of({choice(self.return_random_primitive_value())})")
+        elif "MUTATE_ARRAY" in statement:
+            statement = statement.replace("MUTATE_ARRAY", self.return_mutated_arrays())
+        if "RANDOM_VAR" in statement:
+            statement = statement.replace("RANDOM_VAR", self.return_random_primitive_value())
+        if "OP" in statement:
+            statement = statement.replace("OP", self.return_random_op())
+        if "condition" in statement:
+            statement = statement.replace("condition", self.return_condition())
         if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call" not in statement:
             return statement
-        if "FCALL" in statement:
+        elif "FCALL" in statement:
             return self.parse_for_fcall(statement)
         elif "for_loop" in statement:
             return self.parse_for_loop(statement)
@@ -50,6 +62,18 @@ class JSFuzzer:
 
     def do_for_loop(self, var_name, loop_count):
         return f"for(let {var_name}; {loop_count}; {var_name.split('=')[0]}++)" + "{"
+
+    def return_random_primitive_value(self):
+        return choice(["null", "undefined", "true", "false", "1", "''", "{}"])
+
+    def return_random_op(self):
+        return choice(["===", "==", ">=", "<=", "!=", "!==", "<", ">", "&&", "||"])
+    
+    def return_mutated_arrays(self):
+        return choice([f"new Array({randint(10000,20000)})", f"Array.of({self.return_random_primitive_value()})"])
+
+    def return_condition(self):
+        return self.return_random_primitive_value() + self.return_random_op() + self.return_random_primitive_value()
     
 def main():
 
