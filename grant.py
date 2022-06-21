@@ -39,20 +39,23 @@ class JSFuzzer:
         if not isinstance(statement, str):
             return ""
         if "MUTATE_ARRAY" in statement:
-            statement = statement.replace("MUTATE_ARRAY", self.return_mutated_arrays())
+            for _ in range(statement.count("MUTATE_ARRAY") + 1):
+                statement = statement.replace("MUTATE_ARRAY", self.return_mutated_arrays(), 1)
         if "RANDOM_VAR" in statement:
-            statement = statement.replace("RANDOM_VAR", self.return_random_primitive_value())
+            for _ in range(statement.count("RANDOM_VAR") + 1):
+                statement = statement.replace("RANDOM_VAR", self.return_random_primitive_value(), 1)
         if "OP" in statement:
-            statement = statement.replace("OP", self.return_random_op())
+            for _ in range(statement.count("OP") + 1):
+                statement = statement.replace("OP", self.return_random_op(), 1)
         if "condition" in statement:
             statement = statement.replace("condition", self.return_condition())
-        if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call" not in statement:
+        if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call_it" not in statement:
             return statement
         elif "FCALL" in statement:
             return self.parse_for_fcall(statement)
         elif "for_loop" in statement:
             return self.parse_for_loop(statement)
-        elif "call" in statement:
+        elif "call_it" in statement:
             return statement.split(",")[1] + ";"
         return statement
 
@@ -66,7 +69,7 @@ class JSFuzzer:
         return choice(["===", "==", ">=", "<=", "!=", "!==", "<", ">", "&&", "||"])
     
     def return_mutated_arrays(self):
-        return choice([f"new Array({randint(10000,20000)})", f"Array.of({self.return_random_primitive_value()})"])
+        return choice([f"new Array({randint(10000,20000)})", f"Array.of({self.return_random_primitive_value()})", " new Int8Array(8)", "new Uint8Array(8)", "new Int16Array(16)", "new Uint16Array(16)", "new Int32Array(32)", "new Uint32Array(32)", "new Float32Array(1.1)", "new Float64Array(1.2)", "new BigInt64Array(1999999)", "new BigUint64Array(100000000)"])
 
     def return_condition(self):
         return self.return_random_primitive_value() + self.return_random_op() + self.return_random_primitive_value()
