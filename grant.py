@@ -12,7 +12,7 @@ class JSFuzzer:
 
     def parse_file(self, file, cycles):
         bt_answer = ""
-        start = False
+        var_names = dict()
         with open(file, "r") as f:
             statements = f.readlines()
             for cycle in range(cycles + 1):
@@ -20,7 +20,7 @@ class JSFuzzer:
                     if "ONLY," in statement and cycle != 0:
                         continue
                     statement = statement.strip("ONLY,")
-                    bt_answer += self.do_parse(statement, start)
+                    bt_answer += self.do_parse(statement, var_names)
                 print(beautify(bt_answer))  
                 bt_answer = ""
     
@@ -28,48 +28,48 @@ class JSFuzzer:
         loop = statement.split(",")
         return self.do_for_loop(loop[1], loop[2], loop[3])
 
-    def do_parse(self, statement, start):
+    def replace_random(self, statement, rand, value):
+        if rand in statement:
+            for _ in range(statement.count(rand)):
+                statement = statement.replace(rand, value)
+        return statement
+
+    def parse_function_calls(self, var_type, sign_type, var_names, statement):
         new_statement = ""
+        print(var_type)
+        for var_name in var_names:
+            if var_names[var_name] == var_type:
+                for function in statement[statement.find(".") + 1:].split("@"):
+                    if "index" in function:
+                        function = self.replace_random(function, "index", f"{randint(100,1000)}")
+                    new_statement += f"{var_name} {sign_type} {function};"
+        return new_statement
+
+    def do_parse(self, statement, var_names):
         if not isinstance(statement, str):
             return ""
-        if "%" in statement:
-            if "%rand_string%" in statement:
-                for _ in range(statement.count("%rand_string%")):
-                    statement = statement.replace("%rand_string%", "".join(choice(string.ascii_letters) for x in range(20)))
-            if "%rand_object%" in statement:
-                for _ in range(statement.count("%rand_object%")):
-                    statement = statement.replace("%rand_object%", self.return_mutated_objects())
+        if "%rand_string%" in statement:
+            statement = self.replace_random(statement, "%rand_string%", "".join(string.ascii_letters for _ in range(randint(10,20))))
+        if "$" in statement:
+            var_names[statement[statement.find("$") + 1:statement.rfind("$")]] = statement[statement.find("#") + 1:statement.rfind("#")]
+            statement = statement.replace("$", '').replace("#", '')
+        if "FUNCTION_CALLS" in statement:
+            var_type_index = statement.find("''")
+            var_type = statement[var_type_index:var_type_index + 2]
+            sign_type = statement[statement.find(":") + 1:statement.rfind(":")]
+            statement = self.parse_function_calls(var_type, sign_type, var_names, statement)
         if "ARITH" in statement:
-            for _ in range(statement.count("ARITH")):
-                statement = statement.replace("ARITH", self.return_random_arith(), 1)
+            statement = self.replace_random(statement, "ARITH", self.return_random_arith())
         if "MUTATE_OBJECTS" in statement:
-            for _ in range(statement.count("MUTATE_OBJECTS") + 1):
-                statement = statement.replace("MUTATE_OBJECTS", self.return_mutated_objects(), 1)
+            statement = self.replace_random(statement, "MUTATE_OBJECTS", self.return_mutated_objects())
         if "MUTATE_ARRAY" in statement:
-            for _ in range(statement.count("MUTATE_ARRAY") + 1):
-                statement = statement.replace("MUTATE_ARRAY", self.return_mutated_arrays(), 1)
+            statement = self.replace_random(statement, "MUTATE_ARRAY", self.return_mutated_arrays())
         if "RANDOM_VAR" in statement:
-            for _ in range(statement.count("RANDOM_VAR") + 1):
-                statement = statement.replace("RANDOM_VAR", self.return_random_primitive_value(), 1)
+            statement = self.replace_random(statement, "RANDOM_VAR", self.return_random_primitive_value())
         if "OP" in statement:
-            for _ in range(statement.count("OP") + 1):
-                statement = statement.replace("OP", self.return_random_op(), 1)
+            statement = self.replace_random(statement, "OP", self.return_random_op())
         if "condition" in statement:
-            statement = statement.replace("condition", self.return_condition())
-        if re.search(r':.|=:', statement):
-            funcs_index_start = statement.index(".") + 1
-            var_name = statement[statement.index("$") + 1:statement.rindex("$")]
-            caller = statement[statement.index("#") + 1:statement.rindex("#")]
-            operator = statement[statement.index(":") + 1:statement.rindex(":")]
-            for func in statement[funcs_index_start:].split("@"):
-                if "index" in func:
-                    for _ in range(func.count("index")):
-                        func = func.replace("index", f"{randint(1, 20)}")
-                if "%" in func:
-                    if "%current_var%" in func:
-                        func = func.replace("%current_var%", f"{var_name}")
-                new_statement += f"{var_name} {operator} {caller}.{func};"
-            return "try {" + new_statement + "}catch(e){}"
+            statement = self.replace_random(statement, "OP", self.return_condition())
         if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call_it" not in statement:
             return statement
         elif "for_loop" in statement:
