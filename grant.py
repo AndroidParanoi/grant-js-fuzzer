@@ -1,7 +1,9 @@
 #!/bin/python
 
+from email.policy import strict
 from random import randint
 import argparse
+import re
 import string
 from jsbeautifier import beautify
 from random import choice
@@ -27,34 +29,35 @@ class JSFuzzer:
         return self.do_for_loop(loop[1], loop[2], loop[3])
 
     def replace_random(self, statement, rand, value):
-        if rand in statement:
-            for _ in range(statement.count(rand)):
-                statement = statement.replace(rand, value)
+        for _ in range(statement.count(rand)):
+            statement = statement.replace(rand, choice(value), 1)
         return statement
 
     def parse_function_calls(self, var_type, sign_type, var_names, statement):
         new_statement = ""
-        print(var_type)
         for var_name in var_names:
-            if var_names[var_name] == var_type:
-                for function in statement[statement.find(".") + 1:].split("@"):
-                    if "index" in function:
-                        function = self.replace_random(function, "index", f"{randint(100,1000)}")
-                    new_statement += f"{var_name} {sign_type} {function};"
+            if var_type not in var_names[var_name]:
+                continue
+            for function in statement[statement.find(".") + 1:].split("@"):
+                if "index" in function:
+                    for _ in range(statement.count("index")):
+                        function = function.replace("index", f"{randint(1,11)}", 1)
+                if "%vars%" in function:
+                    function = function.replace("%vars%", var_name)
+                new_statement += "try {" + f"{var_name} {sign_type} {var_name}.{function};" + "}catch(e){console.log(e)}"
         return new_statement
 
     def do_parse(self, statement, var_names):
         if not isinstance(statement, str):
             return ""
         if "%rand_string%" in statement:
-            statement = self.replace_random(statement, "%rand_string%", "".join(string.ascii_letters for _ in range(randint(10,20))))
+            statement = statement.replace("%rand_string%", "".join(choice(string.ascii_letters) for _ in range(randint(5,10))))
         if "$" in statement:
             var_names[statement[statement.find("$") + 1:statement.rfind("$")]] = statement[statement.find("#") + 1:statement.rfind("#")]
             statement = statement.replace("$", '').replace("#", '')
         if "FUNCTION_CALLS" in statement:
-            var_type_index = statement.find("''")
-            var_type = statement[var_type_index:var_type_index + 2]
-            sign_type = statement[statement.find(":") + 1:statement.rfind(":")]
+            var_type = statement[statement.find("#") + 1:statement.rfind("#")]
+            sign_type = re.findall(r".=", statement)[0]
             statement = self.parse_function_calls(var_type, sign_type, var_names, statement)
         if "ARITH" in statement:
             statement = self.replace_random(statement, "ARITH", self.return_random_arith())
@@ -80,22 +83,22 @@ class JSFuzzer:
         return f"for(let {var_name}; {loop_count}; {loop_incr_decre})" + "{"
 
     def return_random_primitive_value(self):
-        return choice(["null", "undefined", "true", "false", "1", "''", "{}"])
+        return ["null", "undefined", "true", "false", "1", "''", "{}"]
 
     def return_random_op(self):
-        return choice(["===", "==", ">=", "<=", "!=", "!==", "<", ">", "&&", "||"])
+        return ["===", "==", ">=", "<=", "!=", "!==", "<", ">", "&&", "||"]
     
     def return_mutated_arrays(self):
-        return choice([f"new Array({randint(10000,20000)})", f"Array.of({self.return_random_primitive_value()})", " new Int8Array(8)", "new Uint8Array(8)", "new Int16Array(16)", "new Uint16Array(16)", "new Int32Array(32)", "new Uint32Array(32)", "new Float32Array(32)", "new Float64Array(32)", "new BigInt64Array(32)", "new BigUint64Array(1)"])
+        return  [f"new Array({randint(10000,20000)})", f"Array.of({choice(self.return_random_primitive_value())})", " new Int8Array(8)", "new Uint8Array(8)", "new Int16Array(16)", "new Uint16Array(16)", "new Int32Array(32)", "new Uint32Array(32)", "new Float32Array(32)", "new Float64Array(32)", "new BigInt64Array(32)", "new BigUint64Array(1)"]
 
     def return_mutated_objects(self):
-        return choice(["Object", "Function", "Number", "AggregateError", "Atomics", " Boolean", " DataView", " Date", "WebAssembly", " Set"])
+        return ["Object", "Function", "Number", "AggregateError", "Atomics", " Boolean", " DataView", " Date", "WebAssembly", " Set"]
 
     def return_condition(self):
         return self.return_random_primitive_value() + self.return_random_op() + self.return_random_primitive_value()
 
     def return_random_arith(self):
-        return choice(["+", "-", "*", "/"])
+        return ["+", "-", "*", "/"]
     
 def main():
 
