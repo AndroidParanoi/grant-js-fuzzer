@@ -1,7 +1,10 @@
 #!/bin/python
 
+from email.policy import strict
 from random import randint
 import argparse
+import re
+import string
 from jsbeautifier import beautify
 from random import choice
 
@@ -9,6 +12,7 @@ class JSFuzzer:
 
     def parse_file(self, file, cycles):
         bt_answer = ""
+        start = False
         with open(file, "r") as f:
             statements = f.readlines()
             for cycle in range(cycles + 1):
@@ -16,7 +20,7 @@ class JSFuzzer:
                     if "ONLY," in statement and cycle != 0:
                         continue
                     statement = statement.strip("ONLY,")
-                    bt_answer += self.do_parse(statement)
+                    bt_answer += self.do_parse(statement, start)
                 print(beautify(bt_answer))  
                 bt_answer = ""
     
@@ -24,20 +28,23 @@ class JSFuzzer:
         loop = statement.split(",")
         return self.do_for_loop(loop[1], loop[2], loop[3])
 
-    
-    def parse_for_fcall(self, statement):
-        answer = ""
-        split_statement = statement.split("=", 1)  
-        var_name = split_statement[0]
-        call_args = split_statement[1].split(",")
-        libr_call = call_args[1]    
-        for function in call_args[2:]:  
-            answer += f"{var_name} = {libr_call}.{function.replace(';', ',')};"
-        return answer   
-
-    def do_parse(self, statement):
+    def do_parse(self, statement, start):
+        new_statement = ""
         if not isinstance(statement, str):
             return ""
+        if "%" in statement:
+            if "%rand_string%" in statement:
+                for _ in range(statement.count("%rand_string%")):
+                    statement = statement.replace("%rand_string%", "".join(choice(string.ascii_letters) for x in range(20)))
+            if "%rand_object%" in statement:
+                for _ in range(statement.count("%rand_object%")):
+                    statement = statement.replace("%rand_object%", self.return_mutated_objects())
+        if "ARITH" in statement:
+            for _ in range(statement.count("ARITH")):
+                statement = statement.replace("ARITH", self.return_random_arith(), 1)
+        if "MUTATE_OBJECTS" in statement:
+            for _ in range(statement.count("MUTATE_OBJECTS") + 1):
+                statement = statement.replace("MUTATE_OBJECTS", self.return_mutated_objects(), 1)
         if "MUTATE_ARRAY" in statement:
             for _ in range(statement.count("MUTATE_ARRAY") + 1):
                 statement = statement.replace("MUTATE_ARRAY", self.return_mutated_arrays(), 1)
@@ -49,10 +56,22 @@ class JSFuzzer:
                 statement = statement.replace("OP", self.return_random_op(), 1)
         if "condition" in statement:
             statement = statement.replace("condition", self.return_condition())
+        if re.search(r':.|=:', statement):
+            funcs_index_start = statement.index(".") + 1
+            var_name = statement[statement.index("$") + 1:statement.rindex("$")]
+            caller = statement[statement.index("#") + 1:statement.rindex("#")]
+            operator = statement[statement.index(":") + 1:statement.rindex(":")]
+            for func in statement[funcs_index_start:].split("@"):
+                if "index" in func:
+                    for _ in range(func.count("index")):
+                        func = func.replace("index", f"{randint(1, 20)}")
+                if "%" in func:
+                    if "%current_var%" in func:
+                        func = func.replace("%current_var%", f"{var_name}")
+                new_statement += f"{var_name} {operator} {caller}.{func};"
+            return "try {" + new_statement + "}catch(e){}"
         if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call_it" not in statement:
             return statement
-        elif "FCALL" in statement:
-            return self.parse_for_fcall(statement)
         elif "for_loop" in statement:
             return self.parse_for_loop(statement)
         elif "call_it" in statement:
@@ -69,10 +88,16 @@ class JSFuzzer:
         return choice(["===", "==", ">=", "<=", "!=", "!==", "<", ">", "&&", "||"])
     
     def return_mutated_arrays(self):
-        return choice([f"new Array({randint(10000,20000)})", f"Array.of({self.return_random_primitive_value()})", " new Int8Array(8)", "new Uint8Array(8)", "new Int16Array(16)", "new Uint16Array(16)", "new Int32Array(32)", "new Uint32Array(32)", "new Float32Array(1.1)", "new Float64Array(1.2)", "new BigInt64Array(1999999)", "new BigUint64Array(100000000)"])
+        return choice([f"new Array({randint(10000,20000)})", f"Array.of({self.return_random_primitive_value()})", " new Int8Array(8)", "new Uint8Array(8)", "new Int16Array(16)", "new Uint16Array(16)", "new Int32Array(32)", "new Uint32Array(32)", "new Float32Array(32)", "new Float64Array(32)", "new BigInt64Array(32)", "new BigUint64Array(1)"])
+
+    def return_mutated_objects(self):
+        return choice(["Object", "Function", "Number", "AggregateError", "Atomics", " Boolean", " DataView", " Date", "WebAssembly", " Set"])
 
     def return_condition(self):
         return self.return_random_primitive_value() + self.return_random_op() + self.return_random_primitive_value()
+
+    def return_random_arith(self):
+        return choice(["+", "-", "*", "/"])
     
 def main():
 
