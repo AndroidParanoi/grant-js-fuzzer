@@ -35,6 +35,7 @@ class JSFuzzer:
 
     def parse_function_calls(self, var_type, sign_type, var_names, statement):
         new_statement = ""
+        answer = ""
         for var_name in var_names:
             if var_type not in var_names[var_name]:
                 continue
@@ -42,10 +43,18 @@ class JSFuzzer:
                 if "index" in function:
                     for _ in range(statement.count("index")):
                         function = function.replace("index", f"{randint(1,11)}", 1)
+                if "%var_name%" in function:
+                    function = function.replace("%var_name%", var_name)
                 if "%vars%" in function:
-                    function = function.replace("%vars%", var_name)
-                new_statement += "try {" + f"{var_name} {sign_type} {var_name}.{function};" + "}catch(e){console.log(e)}"
-        return new_statement
+                    for name in var_names:
+                        if var_type not in var_names[name]:
+                            continue
+                        new_function = function.replace("%vars%", f"{name}")
+                        new_statement += "try {" + f"{var_name} {sign_type} {new_function};" + "}catch(e){console.log(e)}"
+                elif "%vars%" not in function:
+                    new_statement += "try {" + f"{var_name} {sign_type} {function};" + "}catch(e){console.log(e)}"
+                answer += new_statement
+        return answer
 
     def do_parse(self, statement, var_names):
         if not isinstance(statement, str):
@@ -55,10 +64,6 @@ class JSFuzzer:
         if "$" in statement:
             var_names[statement[statement.find("$") + 1:statement.rfind("$")]] = statement[statement.find("#") + 1:statement.rfind("#")]
             statement = statement.replace("$", '').replace("#", '')
-        if "FUNCTION_CALLS" in statement:
-            var_type = statement[statement.find("#") + 1:statement.rfind("#")]
-            sign_type = re.findall(r".=", statement)[0]
-            statement = self.parse_function_calls(var_type, sign_type, var_names, statement)
         if "ARITH" in statement:
             statement = self.replace_random(statement, "ARITH", self.return_random_arith())
         if "MUTATE_OBJECTS" in statement:
@@ -70,7 +75,11 @@ class JSFuzzer:
         if "OP" in statement:
             statement = self.replace_random(statement, "OP", self.return_random_op())
         if "condition" in statement:
-            statement = self.replace_random(statement, "OP", self.return_condition())
+            statement = self.replace_random(statement, "condition", self.return_condition())
+        if "FUNCTION_CALLS" in statement:
+            var_type = statement[statement.find("#") + 1:statement.rfind("#")]
+            sign_type = re.findall(r".=", statement)[0]
+            statement = self.parse_function_calls(var_type, sign_type, var_names, statement)
         if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call_it" not in statement:
             return statement
         elif "for_loop" in statement:
