@@ -1,9 +1,7 @@
 #!/bin/python
 
-from email.policy import strict
 from random import randint
 import argparse
-import re
 import string
 from jsbeautifier import beautify
 from random import choice
