@@ -1,28 +1,32 @@
 #!/bin/python
-
-from email.policy import strict
 from random import randint
 import argparse
-import re
 import string
 from jsbeautifier import beautify
 from random import choice
 
 class JSFuzzer:
 
-    def parse_file(self, file, cycles):
-        bt_answer = ""
+    def parse_file(self, file):
+        parsed_funcs_segment = dict()
+        type_of_var = None
+        funcs = None
         var_names = dict()
+        bt_answer = ""
         with open(file, "r") as f:
-            statements = f.readlines()
-            for cycle in range(cycles + 1):
-                for statement in statements:
-                    if "ONLY," in statement and cycle != 0:
-                        continue
-                    statement = statement.strip("ONLY,")
-                    bt_answer += self.do_parse(statement, var_names)
-                print(beautify(bt_answer))  
-                bt_answer = ""
+            statement = f.readline()
+            while True:
+                    if "!!function_segment_end!!" in statement:
+                        break
+                    type_of_var, funcs = (self.parse_function_segment(statement))
+                    parsed_funcs_segment[type_of_var] = funcs
+                    statement = f.readline()
+            while True:
+                if "!!end_code_segment!!" in statement:
+                    break
+                bt_answer += self.do_parse(statement, var_names, parsed_funcs_segment, )
+                statement = f.readline()
+        print(beautify(bt_answer))
     
     def parse_for_loop(self, statement):
         loop = statement.split(",")
@@ -32,38 +36,79 @@ class JSFuzzer:
         for _ in range(statement.count(rand)):
             statement = statement.replace(rand, choice(value), 1)
         return statement
+    
+    def switch_arguments(self, func, count):
+        if "object" in func:
+            for _ in range(func.count("object")):
+                func = func.replace("object", choice(self.return_mutated_arrays()).split("(")[0].strip("new "), 1)
+        if "key" in func:
+            for _ in range(func.count("key")):
+                func = func.replace("key", choice(self.return_random_primitive_value()), 1)
+        if "value" in func:
+            for _ in range(func.count("value")):
+                func = func.replace("value", choice(self.return_random_primitive_value()), 1)
+        if "list" in func:
+            for _ in range(func.count("list")):
+                func = func.replace("list", f"[{choice(self.return_random_primitive_value())}, {choice(self.return_random_primitive_value())}]", 1)
+        if "condition" in func:
+            for _ in range(func.count("condition")):
+                func = func.replace("condition", self.return_condition())
+        if "props" in func:
+            for _ in range(func.count("props")):
+                func = func.replace("props", "{" + f"{choice(self.return_random_primitive_value())}:{choice(self.return_random_primitive_value())}" + "}", 1)
+        if "string" in func:
+            for _ in range(func.count("string")):
+                func = func.replace("string", "'" + "".join(choice(string.ascii_letters) for _ in range(10)) + "'", 1)
+        if "regexp" in func:
+            for _ in range(func.count("regexp")):
+                func = func.replace("regexp", "'" + "".join(choice(string.ascii_letters) for _ in range(10)) + "'", 1)
+        if "inddx" in func:
+            for _ in range(func.count("index")):
+                func = func.replace("inddx", f"{randint(1, 20)}", 1)
+        if "arrowfunction" in func:
+            count += 1
+            if count >= 2:
+                return func
+            for _ in range(func.count("arrowfunction")):
+                func = self.switch_arguments(func, count)
+        return func
 
-    def parse_function_calls(self, var_type, sign_type, var_names, statement):
+    def parse_function_calls(self, parsed_funcs_segment, var_names, var_name):
+        func = ""
         new_statement = ""
-        answer = ""
-        for var_name in var_names:
-            if var_type not in var_names[var_name]:
-                continue
-            for function in statement[statement.find(".") + 1:].split("@"):
-                if "index" in function:
-                    for _ in range(statement.count("index")):
-                        function = function.replace("index", f"{randint(1,11)}", 1)
-                if "%var_name%" in function:
-                    function = function.replace("%var_name%", var_name)
-                if "%vars%" in function:
-                    for name in var_names:
-                        if var_type not in var_names[name]:
-                            continue
-                        new_function = function.replace("%vars%", f"{name}")
-                        new_statement += "try {" + f"{var_name} {sign_type} {new_function};" + "}catch(e){console.log(e)}"
-                elif "%vars%" not in function:
-                    new_statement += "try {" + f"{var_name} {sign_type} {function};" + "}catch(e){console.log(e)}"
-                answer += new_statement
-        return answer
+        count = 0 
+        var_caller = ""
+        if "[" in var_name:
+            var_name = var_name.split("[")[0]
+        elif "." in var_name:
+            var_name = var_name.split(".")[0]
+        if "'" in var_names[var_name]:
+            var_caller = var_name
+            var_get = "String"
+        elif "{}" in var_names[var_name]:
+            var_caller = "Object"
+            var_get = var_caller
+        elif "Reflect" in var_names[var_name]:
+            var_caller = "Reflect"
+            var_get = "Reflect"
+        func = choice(parsed_funcs_segment[var_get])
+        func = self.switch_arguments(func, count)
+        new_statement += f"{var_caller}.{func.replace(';', ',')}"
+        return new_statement
 
-    def do_parse(self, statement, var_names):
-        if not isinstance(statement, str):
+
+    def parse_function_segment(self, statement):
+        type_of_var = statement[statement.find(":") + 1:statement.rfind(":")]
+        funcs = statement.split("=")[1].strip(" ").split(",")
+        return (type_of_var, funcs)
+
+    def do_parse(self, statement, var_names, parsed_funcs_segment, ):
+        new_statement = ""
+        if not isinstance(statement, str) or statement.startswith("!!"):
             return ""
         if "%rand_string%" in statement:
-            statement = statement.replace("%rand_string%", "".join(choice(string.ascii_letters) for _ in range(randint(5,10))))
-        if "$" in statement:
-            var_names[statement[statement.find("$") + 1:statement.rfind("$")]] = statement[statement.find("#") + 1:statement.rfind("#")]
-            statement = statement.replace("$", '').replace("#", '')
+            for _ in range(statement.count("%rand_string%")):
+                statement = statement.replace("%rand_string%", "".join(choice(string.ascii_letters) for _ in range(randint(5,10))), 1)
         if "ARITH" in statement:
             statement = self.replace_random(statement, "ARITH", self.return_random_arith())
         if "MUTATE_OBJECTS" in statement:
@@ -76,10 +121,13 @@ class JSFuzzer:
             statement = self.replace_random(statement, "OP", self.return_random_op())
         if "condition" in statement:
             statement = self.replace_random(statement, "condition", self.return_condition())
-        if "FUNCTION_CALLS" in statement:
-            var_type = statement[statement.find("#") + 1:statement.rfind("#")]
-            sign_type = re.findall(r".=", statement)[0]
-            statement = self.parse_function_calls(var_type, sign_type, var_names, statement)
+        if "$" in statement:
+            var_names[statement[statement.find("$") + 1:statement.rfind("$")]] = statement[statement.find("#") + 1:statement.rfind("#")]
+            statement = statement.replace("$", '').replace("#", '')
+        if "@function@" in statement:
+            var_name = statement[statement.find("@") + 1: statement.split("=")[0].rfind("@")]
+            new_statement = "try {" + statement.replace("@function@", self.parse_function_calls(parsed_funcs_segment, var_names, var_name)) + "}catch(e){}"
+            statement = new_statement.replace("@", "")
         if ";" not in statement and "FCALL" not in statement and "loop" not in statement and "call_it" not in statement:
             return statement
         elif "for_loop" in statement:
@@ -113,10 +161,9 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", required=True, type=str)
-    parser.add_argument("--cycles", required=False, type=int, default=10)
     args = parser.parse_args()
     jsfuzzer = JSFuzzer()
-    jsfuzzer.parse_file(args.file, args.cycles)
+    jsfuzzer.parse_file(args.file)
 
 if __name__ == "__main__":
     main()
