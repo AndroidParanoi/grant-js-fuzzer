@@ -3,7 +3,6 @@ import argparse
 import string
 from jsbeautifier import beautify
 from random import choice, randint
-from re import findall
 
 class JSFuzzer:
 
@@ -11,9 +10,8 @@ class JSFuzzer:
         parsed_funcs_segment = dict()
         type_of_var = None
         funcs = None
-        var_names = list()
         bt_answer = ""
-        var_types = {"Array":"new Array(10000)", "String":"''", "Object":"{}", "Boolean":["true", "false"]}
+        var_types = {"Array":"new Array(10000)", "String": "''", "Object":"{}", "ArrayBuffer":"new ArrayBuffer(10000)", "DataView":"new DataView(new ArrayBuffer(10000))", "Boolean":"new Boolean(true)","Map":"new Map()"}
         with open(file, "r") as f:
             statement = f.readline()
             while True:
@@ -22,32 +20,29 @@ class JSFuzzer:
                     type_of_var, funcs = (self.parse_function_segment(statement))
                     parsed_funcs_segment[type_of_var] = funcs
                     if "InitV" in statement:
-                        var_names.append(self.parse_init_v_vars(parsed_funcs_segment, var_types))
+                        names, values = (self.parse_init_v_vars(parsed_funcs_segment, var_types))
                     statement = f.readline()
             for statement in f.readlines():
                 if "!!statement_segment_end!!" in statement:
                     break
-                name = var_names[randint(0, len(var_names) - 1 )]
-                bt_answer += self.do_parse(statement, list(name), parsed_funcs_segment)
+                bt_answer += self.do_parse(statement, names, parsed_funcs_segment)
         print(beautify(bt_answer))
 
     def parse_init_v_vars(self, parsed_funcs_segment, var_types):
-        var_names = dict()
+        names = list()
+        values = list()
         y = 0
-        for i in range(1, int(parsed_funcs_segment["InitV"][0]) + 1):
-            if y == 4:
+        for i in range(int(parsed_funcs_segment["InitV"][0]) + 1):
+            if y >= len(parsed_funcs_segment["InitV"][1].split(";")) - 1:
                 y = 0
             else:
                 y += 1
             name = f"var{i}"
-            value = parsed_funcs_segment["InitV"][1].split(";")[y].strip()
-            if isinstance(var_types[value], list):
-                var_value = choice(var_types[value])
-            else:
-                var_value = var_types[value]
-            var_names[name] = var_value
-            print(f"var {name} = {var_value};")
-        return var_names
+            value = (parsed_funcs_segment["InitV"][1].split(";")[y].strip())
+            print(f"var {name} = {var_types[value]};")
+            names.append(name)
+            values.append(value)
+        return names, values
 
     def parse_for_loop(self, statement):
         loop = statement.split(",")
@@ -77,9 +72,9 @@ class JSFuzzer:
         if "propertyy" in right_var:
             for _ in range(right_var.count("propertyy")):
                 right_var = right_var.replace("propertyy", "{ '': " + f"{choice(self.return_random_primitive_value())}" + "}")
-        if "string" in right_var:
-            for _ in range(right_var.count("string")):
-                right_var = right_var.replace("string",  "'" + "".join(choice(string.ascii_letters) for _ in range(20)) + "'", 1)
+        if "var_str_r" in right_var:
+            for _ in range(right_var.count("var_str_r")):
+                right_var = right_var.replace("var_str_r",  "'" + "".join(choice(string.ascii_letters) for _ in range(20)) + "'", 1)
         if "regexp" in right_var:
             for _ in range(right_var.count("regexp")):
                 right_var = right_var.replace("regexp", '".\+"')
@@ -88,24 +83,35 @@ class JSFuzzer:
         if "inddx" in right_var:
             for _ in range(right_var.count("inddx")):
                 right_var = right_var.replace("inddx", f"{randint(1, 20)}")
+        if "json_string" in right_var:
+            for _ in range(right_var.count("json_string")):
+                right_var = right_var.replace("json_string", '{"swag":"1"}')
         right_var = right_var.replace(";", ",")
         return right_var
 
-    def do_parse(self, statement, name, parsed_funcs_segment):
+    def do_parse(self, statement, names, parsed_funcs_segment):
         if "!!" in statement:
             return ""
-        if "@variable@" in statement:
-            statement = statement.replace("@variable@", choice(name))
-        if "@variable2@"in statement:
-            statement = statement.replace("@variable2@", choice(name))
-        if "function@" in statement:
+        if "function" in statement:
             type_function = statement.split("=")[1].strip()
-            type_function = type_function[type_function.find("@") + 1: type_function.rfind(".")]
-            right_var = self.return_variable_right_type(type_function, parsed_funcs_segment)
-            right_var = self.switch_arguments(right_var)
-            statement = "try{ " + statement.replace("function@", right_var) + "}\ncatch(e){}"
+            prototype = type_function[type_function.find("@") + 1: type_function.find(".")]
+            funcs = self.return_variable_right_type(prototype, parsed_funcs_segment)
+            funcs = self.switch_arguments(funcs)
+            caller = type_function[type_function.find(".") + 2: type_function.rfind(".") - 1]
+            statement = "try{ " + statement.replace(f"@{prototype}.@{caller}@.function", f"@{caller}@.{funcs}") + "}\ncatch(e){}"
+        for i in range(0, int(parsed_funcs_segment["InitV"][0])):
+            if f"@variable{i}@" in statement:
+                statement = statement.replace(f"@variable{i}@", names[i])
         if "ARITH" in statement:
             statement = self.replace_random(statement, "ARITH", self.return_random_arith())
+        if "RANDOM_VAR" in statement:
+            statement = self.replace_random(statement, "RANDOM_VAR", self.return_random_primitive_value())
+        if "MUTATE_ARRAY" in statement:
+            statement = self.replace_random(statement, "MUTATE_ARRAY", self.return_mutated_arrays())
+        if "OP" in statement:
+            statement = self.replace_random(statement, "OP", self.return_random_op())
+        if "MUTATE_OBJECT" in statement:
+            statement = self.replace_random(statement, "MUTATE_OBJECT", self.return_mutated_objects())
         return statement.replace("@", "")
 
     def do_for_loop(self, var_name, loop_count, loop_incr_decre):
