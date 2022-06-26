@@ -6,13 +6,12 @@ from random import choice, randint
 
 class JSFuzzer:
 
-    def parse_file(self, file):
+    def parse_file(self, file, cycles):
         parsed_funcs_segment = dict()
         type_of_var = None
         funcs = None
         bt_answer = ""
         var_name_value = dict()
-        var_types = {"Array":"new Array(10000)", "String": "''", "Object":"{}", "ArrayBuffer":"new ArrayBuffer(10000)", "DataView":"new DataView(new ArrayBuffer(10000))", "Boolean":"new Boolean(true)","Map":"new Map()"}
         with open(file, "r") as f:
             statement = f.readline()
             while True:
@@ -21,29 +20,23 @@ class JSFuzzer:
                     type_of_var, funcs = (self.parse_function_segment(statement))
                     parsed_funcs_segment[type_of_var] = funcs
                     if "InitV" in statement:
-                        names, values = (self.parse_init_v_vars(parsed_funcs_segment, var_types))
+                        names = (self.parse_init_v_vars(parsed_funcs_segment))
                     statement = f.readline()
             for statement in f.readlines():
-                if "!!statement_segment_end!!" in statement:
-                    break
-                bt_answer += self.do_parse(statement, names, parsed_funcs_segment, var_name_value)
+                for cycle in range(cycles):
+                    if "ONLY" in statement and cycle != 0:
+                        continue
+                    new_statement = statement.replace("ONLY,", "")
+                    bt_answer += self.do_parse(new_statement, names, parsed_funcs_segment, var_name_value)
         print(beautify(bt_answer))
 
-    def parse_init_v_vars(self, parsed_funcs_segment, var_types):
+    def parse_init_v_vars(self, parsed_funcs_segment):
         names = list()
-        values = list()
-        y = 0
         for i in range(int(parsed_funcs_segment["InitV"][0]) + 1):
-            if y >= len(parsed_funcs_segment["InitV"][1].split(";")) - 1:
-                y = 0
-            else:
-                y += 1
             name = f"var{i}"
-            value = (parsed_funcs_segment["InitV"][1].split(";")[y].strip())
-            print(f"var {name} = {var_types[value]};")
+            print(f"var {name};")
             names.append(name)
-            values.append(value)
-        return names, values
+        return names
 
     def parse_for_loop(self, statement):
         loop = statement.split(",")
@@ -76,7 +69,7 @@ class JSFuzzer:
                 if len(to_replace[0]) > 0:
                     replac = choice(to_replace[0])
                 else:
-                    replac = self.return_mutated_objects()
+                    replac = choice(self.return_mutated_objects())
                 right_var = right_var.replace("object", replac)
         if "Array" in right_var:
             for _ in range(right_var.count("Array")):
@@ -85,9 +78,20 @@ class JSFuzzer:
                 else:
                     replac = self.return_mutated_arrays()
                 right_var = right_var.replace("Array", replac)
+        if "list" in right_var:
+            for _ in range(right_var.count("list")):
+                if len(to_replace[2]) > 0:
+                    replac = choice(to_replace[2])
+                else:
+                    replac = "['" + "".join(choice(string.ascii_letters) for _ in range(20)) + "'" + f"{self.return_random_primitive_value()}]"
+                right_var = right_var.replace("list",  replac, 1)
         if "objkey" in right_var:
             for _ in range(right_var.count("objkey")):
-                right_var = right_var.replace("objkey",  "'" + "".join(choice(string.ascii_letters) for _ in range(20)) + "'", 1)
+                if len(to_replace[0]) > 0 and len(to_replace[1]) > 0 and len(to_replace[2]) > 0:
+                    replac = choice(to_replace[0] + to_replace[1] + to_replace[2])
+                else:
+                    replac = "'" + "".join(choice(string.ascii_letters) for _ in range(20)) + "'"
+                right_var = right_var.replace("objkey",  replac, 1)
         if "condition" in right_var:
             for _ in range(right_var.count("condition")):
                 right_var = right_var.replace("condition", self.return_condition())
@@ -95,7 +99,13 @@ class JSFuzzer:
             right_var = self.replace_random(right_var, "primitiveee", self.return_random_primitive_value())
         if "propertyy" in right_var:
             for _ in range(right_var.count("propertyy")):
-                right_var = right_var.replace("propertyy", "{ '': " + f"{choice(self.return_random_primitive_value())}" + "}")
+                if len(to_replace[0]) > 0 and len(to_replace[1]) > 0 and len(to_replace[2]) > 1:
+                    string_to_replace = choice(to_replace[2])
+                    value_to_replace = choice(to_replace[0] + to_replace[1] + to_replace[2])
+                else:
+                    string_to_replace = "''"
+                    value_to_replace = self.return_random_primitive_value()
+                right_var = right_var.replace("propertyy", "{" + f"{string_to_replace}" + " : " + f"{value_to_replace}" + "}")
         if "var_str_r" in right_var:
             for _ in range(right_var.count("var_str_r")):
                 if len(to_replace[2]) > 0:
@@ -106,15 +116,10 @@ class JSFuzzer:
         if "regexp" in right_var:
             for _ in range(right_var.count("regexp")):
                 right_var = right_var.replace("regexp", '".\+"')
-        if "concatenator" in right_var:
-            right_var = self.replace_random(right_var, "concatenator", self.return_mutated_arrays())
         if "inddx" in right_var:
             for _ in range(right_var.count("inddx")):
                 right_var = right_var.replace("inddx", f"{randint(1, 20)}")
-        if "json_string" in right_var:
-            for _ in range(right_var.count("json_string")):
-                right_var = right_var.replace("json_string", '[{' + '"' + "".join(choice(string.ascii_letters + string.hexdigits + string.octdigits + string.punctuation.replace('"', '').replace("\\", "")) for _ in range(21,55)) + '"' + ':' + '"' + "".join(choice(string.ascii_letters + string.hexdigits + string.octdigits + string.punctuation.replace('"', '').replace("\\", "")) for _ in range(21,55)) + '"' +'}, true, false, undefined]')
-        right_var = right_var.replace(";", ",")
+        right_var = right_var.replace(";", ",").replace("|", ":")
         return right_var
 
     def do_parse(self, statement, names, parsed_funcs_segment, var_name_value):
@@ -131,11 +136,11 @@ class JSFuzzer:
             if f"@variable{i}@" in statement:
                 statement = statement.replace(f"@variable{i}@", names[i])
                 value = statement.split("=")[1].strip("\n ")
-                if "{" in value and "}" in value:
+                if ("{" in value and "}" in value) or value in self.return_mutated_objects():
                     var_name_value[names[i]] = "Object"
                 elif "'" in value[0] and "'" in value[len(value) - 1]:
                     var_name_value[names[i]] = "String"
-                elif "[" in value and "]" in value:
+                elif ("[" in value and "]" in value) or ("Array" in value):
                     var_name_value[names[i]] = "Array"
         if "ARITH" in statement:
             statement = self.replace_random(statement, "ARITH", self.return_random_arith())
@@ -174,9 +179,10 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", required=True, type=str)
+    parser.add_argument("--cycles", required=True, type=int)
     args = parser.parse_args()
     jsfuzzer = JSFuzzer()
-    jsfuzzer.parse_file(args.file)
+    jsfuzzer.parse_file(args.file, args.cycles)
 
 if __name__ == "__main__":
     main()
